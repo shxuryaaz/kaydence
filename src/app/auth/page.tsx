@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { acceptInvite } from '@/lib/team-queries';
 
-function AuthPageContent() {
+export default function AuthPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
@@ -26,23 +24,10 @@ function AuthPageContent() {
     setError('');
     setSubmitting(true);
     try {
-      let uid: string;
       if (mode === 'signin') {
-        const cred = await signInWithEmail(email, password);
-        uid = cred.user.uid;
+        await signInWithEmail(email, password);
       } else {
-        const cred = await signUpWithEmail(email, password, name);
-        uid = cred.user.uid;
-      }
-      const invite = searchParams.get('invite');
-      if (invite) {
-        try {
-          const teamId = await acceptInvite(invite, uid);
-          router.replace(`/teams/${teamId}`);
-          return;
-        } catch {
-          // Invite invalid or already used — proceed to normal redirect
-        }
+        await signUpWithEmail(email, password, name);
       }
       router.replace('/dashboard');
     } catch (err: unknown) {
@@ -57,18 +42,7 @@ function AuthPageContent() {
     setError('');
     setSubmitting(true);
     try {
-      const cred = await signInWithGoogle();
-      const uid = cred.user.uid;
-      const invite = searchParams.get('invite');
-      if (invite) {
-        try {
-          const teamId = await acceptInvite(invite, uid);
-          router.replace(`/teams/${teamId}`);
-          return;
-        } catch {
-          // Invite invalid or already used — proceed to normal redirect
-        }
-      }
+      await signInWithGoogle();
       router.replace('/dashboard');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Google sign-in failed.';
@@ -200,17 +174,5 @@ function AuthPageContent() {
         </p>
       </div>
     </div>
-  );
-}
-
-export default function AuthPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-[#0f0f0f] border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
-      <AuthPageContent />
-    </Suspense>
   );
 }
