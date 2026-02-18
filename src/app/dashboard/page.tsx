@@ -6,7 +6,10 @@ import { useAuth } from '@/context/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import Navbar from '@/components/Navbar';
 import HomeCard from '@/components/HomeCard';
+import Link from 'next/link';
 import { getTodayLog, getRecentLogs, getWeekStart, getLogsForWeek, computeTrend, computeStreak } from '@/lib/queries';
+import { getTeamsForUser, getTeamStandupForDate } from '@/lib/team-queries';
+import { todayUtc } from '@/lib/timezone-utils';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { DailyLog, Trend } from '@/types';
 
@@ -53,6 +56,9 @@ function DashboardContent() {
   const [loadingData, setLoadingData] = useState(true);
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [welcomed, setWelcomed] = useState(true); // start true to avoid flicker
+  const [userTeams, setUserTeams] = useState<{ id: string; name: string }[]>([]);
+  const [teamStandupCheckedIn, setTeamStandupCheckedIn] = useState(0);
+  const [teamStandupTotal, setTeamStandupTotal] = useState(0);
 
   const dayOfWeek = new Date().getDay();
 
@@ -75,10 +81,11 @@ function DashboardContent() {
 
     async function load() {
       try {
-        const [today, weekLogs, recentLogs] = await Promise.all([
+        const [today, weekLogs, recentLogs, teams] = await Promise.all([
           getTodayLog(user!.uid),
           getLogsForWeek(user!.uid, getWeekStart()),
           getRecentLogs(user!.uid, 14),
+          getTeamsForUser(user!.uid),
         ]);
         setTodayLog(today);
         setDaysCheckedIn(weekLogs.length);
@@ -87,6 +94,12 @@ function DashboardContent() {
         setTrend(computeTrend(recentLogs));
         setStreak(computeStreak(recentLogs));
         if (recentLogs.length === 0) setIsFirstTime(true);
+        setUserTeams(teams.map((t) => ({ id: t.id, name: t.name })));
+        if (teams.length > 0) {
+          const entries = await getTeamStandupForDate(teams[0].id, todayUtc());
+          setTeamStandupCheckedIn(entries.filter((e) => e.log !== null).length);
+          setTeamStandupTotal(entries.length);
+        }
       } catch {
         // Supabase not reachable — show empty state
       } finally {
@@ -124,14 +137,33 @@ function DashboardContent() {
             <div className="w-5 h-5 border-2 border-[#0f0f0f] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <HomeCard
-            todayLog={todayLog}
-            daysCheckedIn={daysCheckedIn}
-            avgScore={avgScore}
-            trend={trend}
-            streak={streak}
-            dayOfWeek={dayOfWeek}
-          />
+          <>
+            {userTeams.length > 0 && (
+              <div className="rounded-2xl bg-white border border-[#e8e6df] p-6 mb-6" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div className="text-[12px] uppercase tracking-widest text-[#888] mb-1 font-medium">
+                  Team
+                </div>
+                <div className="text-lg font-bold text-[#0f0f0f] mb-1">{userTeams[0].name}</div>
+                <div className="text-sm text-[#555] mb-3">
+                  {teamStandupCheckedIn} / {teamStandupTotal} checked in today
+                </div>
+                <Link
+                  href={`/teams/${userTeams[0].id}/standup`}
+                  className="text-sm font-medium text-[#0f0f0f] underline underline-offset-2"
+                >
+                  View team standup →
+                </Link>
+              </div>
+            )}
+            <HomeCard
+              todayLog={todayLog}
+              daysCheckedIn={daysCheckedIn}
+              avgScore={avgScore}
+              trend={trend}
+              streak={streak}
+              dayOfWeek={dayOfWeek}
+            />
+          </>
         )}
       </div>
     </div>

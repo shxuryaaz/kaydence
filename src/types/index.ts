@@ -39,22 +39,99 @@ export interface WeeklyReport {
 
 export type Trend = 'improving' | 'stable' | 'declining';
 
+// ─── Team System Types ────────────────────────────────────────────────────────
+
+export type TeamRole = "owner" | "admin" | "member";
+
 export interface Team {
   id: string;
   name: string;
-  owner_id: string;
-  invite_code: string;
-  standup_deadline: string | null; // "HH:MM" 24h
+  slug: string | null;
+  standup_deadline_utc: string; // "HH:MM:SS" UTC time
   created_at: string;
+  updated_at: string;
+}
+
+export interface TeamWithRole extends Team {
+  role: TeamRole;
 }
 
 export interface TeamMember {
+  id: string;
   team_id: string;
   user_id: string;
-  role: 'owner' | 'member';
+  role: TeamRole;
   joined_at: string;
 }
 
-export interface TeamMemberWithProfile extends TeamMember {
-  profile: Profile;
+export interface TeamMemberWithProfile {
+  id: string;
+  role: TeamRole;
+  joined_at: string;
+  profile: {
+    id: string;
+    display_name: string | null;
+    email: string;
+    avatar_url?: string | null;
+  };
+}
+
+export interface TeamInvite {
+  id: string;
+  team_id: string;
+  email: string;
+  role: Exclude<TeamRole, "owner">;
+  invited_by: string;
+  created_at: string;
+}
+
+// Standup aggregation types
+export interface TeamStandupEntry {
+  profile: {
+    id: string;
+    display_name: string | null;
+    email: string;
+    avatar_url?: string | null;
+  };
+  role: TeamRole;
+  log: DailyLog | null;
+}
+
+export interface TeamStandupDay {
+  date: string;
+  entries: TeamStandupEntry[];
+}
+
+export interface TeamStandupWeek {
+  weekStart: string;
+  days: TeamStandupDay[];
+}
+
+// Reflection aggregation types
+export interface TeamReflectionEntry {
+  profile: {
+    id: string;
+    display_name: string | null;
+    email: string;
+    avatar_url?: string | null;
+  };
+  role: TeamRole;
+  reflection: SprintReflection | null;
+}
+
+// Weekly report aggregation types
+export interface TeamWeeklyReport {
+  weekStart: string;
+  memberCount: number;
+  avgScore: number | null;
+  totalCheckIns: number;
+  memberReports: {
+    profile: {
+      id: string;
+      display_name: string | null;
+      email: string;
+      avatar_url?: string | null;
+    };
+    report: WeeklyReport | null;
+  }[];
 }
