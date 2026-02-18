@@ -12,22 +12,25 @@ interface Props {
 const steps = ['worked_on', 'working_next', 'blockers', 'score'] as const;
 type Step = typeof steps[number];
 
-const stepMeta: Record<Step, { label: string; sublabel?: string; type: 'textarea' | 'score'; placeholder?: string }> = {
+const stepMeta: Record<Step, { label: string; sublabel?: string; type: 'textarea' | 'score'; placeholder?: string; hint?: string }> = {
   worked_on: {
     label: 'What did you work on today?',
     type: 'textarea',
     placeholder: 'Describe what you built, fixed, or progressed on...',
+    hint: 'e.g. Finished the auth flow, fixed login redirect bug, reviewed PR #42',
   },
   working_next: {
     label: "What's next on your plate?",
     type: 'textarea',
     placeholder: 'What are you picking up tomorrow or next session...',
+    hint: 'e.g. Start dashboard redesign, unblock Ana on API keys, write tests for payments',
   },
   blockers: {
     label: 'Any blockers?',
     sublabel: "Skip if you're all clear.",
     type: 'textarea',
     placeholder: "Describe what's in your way, or leave blank...",
+    hint: 'e.g. Waiting on Figma files from design. Need DB access for staging.',
   },
   score: {
     label: 'How was your day?',
@@ -109,17 +112,22 @@ export default function StandupForm({ userId }: Props) {
 
       {/* Input */}
       {meta.type === 'textarea' ? (
-        <textarea
-          autoFocus
-          value={values[step as 'worked_on' | 'working_next' | 'blockers']}
-          onChange={handleTextChange}
-          placeholder={meta.placeholder}
-          rows={5}
-          className="w-full rounded-2xl border border-[#e8e8e8] bg-[#fafafa] px-4 py-3.5 text-[13px] text-[#0f0f0f] placeholder:text-[#bbb] focus:outline-none focus:bg-white focus:border-[#0f0f0f] resize-none transition-all leading-relaxed"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canAdvance()) handleNext();
-          }}
-        />
+        <div className="space-y-1.5">
+          <textarea
+            autoFocus
+            value={values[step as 'worked_on' | 'working_next' | 'blockers']}
+            onChange={handleTextChange}
+            placeholder={meta.placeholder}
+            rows={5}
+            className="w-full rounded-2xl border border-[#e8e8e8] bg-[#fafafa] px-4 py-3.5 text-[13px] text-[#0f0f0f] placeholder:text-[#bbb] focus:outline-none focus:bg-white focus:border-[#0f0f0f] resize-none transition-all leading-relaxed"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canAdvance()) handleNext();
+            }}
+          />
+          {meta.hint && (
+            <p className="text-[11px] text-[#bbb] italic px-1">{meta.hint}</p>
+          )}
+        </div>
       ) : (
         <ScoreSelector value={values.score} onChange={(s) => setValues((v) => ({ ...v, score: s }))} />
       )}

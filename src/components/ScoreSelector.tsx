@@ -34,10 +34,12 @@ export default function ScoreSelector({ value, onChange }: Props) {
           </button>
         ))}
       </div>
-      {value > 0 && (
+      {value > 0 ? (
         <div className="rounded-xl bg-[#f5f5f5] border border-[#e8e8e8] px-4 py-2.5 text-center">
           <p className="text-[13px] font-medium text-[#0f0f0f]">{labels[value].text}</p>
         </div>
+      ) : (
+        <p className="text-[11px] text-[#bbb] text-center">1 = rough day · 3 = decent · 5 = excellent</p>
       )}
     </div>
   );

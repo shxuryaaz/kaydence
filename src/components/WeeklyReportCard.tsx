@@ -7,9 +7,9 @@ interface Props {
 }
 
 const trendConfig = {
-  improving: { icon: '↑', label: 'Improving', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  stable:    { icon: '→', label: 'Stable',    cls: 'bg-[#f5f5f5] text-[#737373] border-[#e8e8e8]' },
-  declining: { icon: '↓', label: 'Declining', cls: 'bg-red-50 text-red-600 border-red-200' },
+  improving: { icon: '↑', label: 'Improving week', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  stable:    { icon: '→', label: 'Stable week',    cls: 'bg-[#f5f5f5] text-[#737373] border-[#e8e8e8]' },
+  declining: { icon: '↓', label: 'Declining week', cls: 'bg-red-50 text-red-600 border-red-200' },
 };
 
 export default function WeeklyReportCard({ report }: Props) {
@@ -44,6 +44,9 @@ export default function WeeklyReportCard({ report }: Props) {
           <p className="text-[11px] font-semibold uppercase tracking-wide mt-1.5">{tc.label}</p>
         </div>
       </div>
+
+      {/* Stats legend */}
+      <p className="text-[11px] text-[#bbb] -mt-2">Score = your daily mood rating (1–5). Trend compares first vs. second half of the week.</p>
 
       {/* Completed */}
       <div className="rounded-2xl border border-[#e8e8e8] bg-white overflow-hidden"

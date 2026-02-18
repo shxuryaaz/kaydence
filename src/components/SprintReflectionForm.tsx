@@ -54,9 +54,12 @@ export default function SprintReflectionForm({ userId }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <label className="block text-[13px] font-semibold text-[#0f0f0f]">
-          What did you finish this sprint?
-        </label>
+        <div>
+          <label className="block text-[13px] font-semibold text-[#0f0f0f]">
+            What did you finish this sprint?
+          </label>
+          <p className="text-[12px] text-[#aaa] mt-0.5">This generates your weekly report. Be specific — what shipped, what closed, what you can point to.</p>
+        </div>
         <textarea
           autoFocus
           value={finished}
@@ -66,6 +69,7 @@ export default function SprintReflectionForm({ userId }: Props) {
           className="w-full rounded-2xl border border-[#e8e8e8] bg-[#fafafa] px-4 py-3.5 text-[13px] text-[#0f0f0f] placeholder:text-[#bbb] focus:outline-none focus:bg-white focus:border-[#0f0f0f] resize-none transition-all leading-relaxed"
           required
         />
+        <p className="text-[11px] text-[#bbb] italic px-1">e.g. Shipped onboarding v2, fixed 3 prod bugs, wrote API docs, closed 7 tickets</p>
       </div>
 
       <div className="space-y-2">
@@ -93,7 +97,7 @@ export default function SprintReflectionForm({ userId }: Props) {
         disabled={!finished.trim() || loading}
         className="w-full py-3 bg-[#0f0f0f] hover:bg-[#262626] text-white text-[13px] font-semibold rounded-full disabled:opacity-40 transition-all"
       >
-        {loading ? 'Generating report...' : 'Submit & generate report →'}
+        {loading ? 'Generating...' : 'Generate report →'}
       </button>
     </form>
   );

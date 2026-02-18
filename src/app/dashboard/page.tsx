@@ -10,6 +10,36 @@ import { getTodayLog, getRecentLogs, getWeekStart, getLogsForWeek, computeTrend,
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { DailyLog, Trend } from '@/types';
 
+function WelcomeCard({ onDismiss }: { onDismiss: () => void }) {
+  const steps = [
+    { n: '01', text: 'Check in daily — takes 60 seconds. What you worked on, what\'s next, any blockers.' },
+    { n: '02', text: 'Reflect every Saturday — summarise what you shipped across the week.' },
+    { n: '03', text: 'Your weekly report auto-generates. Score, trend, completed items, open blockers.' },
+  ];
+  return (
+    <div className="rounded-2xl bg-[#0f0f0f] px-6 py-5 space-y-4" style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.1)' }}>
+      <div>
+        <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-0.5">How Kaydence works</p>
+        <p className="text-[15px] font-semibold text-white">Three steps, every week.</p>
+      </div>
+      <div className="space-y-3">
+        {steps.map(({ n, text }) => (
+          <div key={n} className="flex gap-3">
+            <span className="text-[13px] font-bold text-white/25 shrink-0 mt-0.5">{n}</span>
+            <p className="text-[13px] text-white/70 leading-relaxed">{text}</p>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={onDismiss}
+        className="text-[12px] font-medium text-white/40 hover:text-white/70 transition-colors"
+      >
+        Got it →
+      </button>
+    </div>
+  );
+}
+
 function DashboardContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -21,6 +51,8 @@ function DashboardContent() {
   const [trend, setTrend] = useState<Trend>('stable');
   const [streak, setStreak] = useState(0);
   const [loadingData, setLoadingData] = useState(true);
+  const [isFirstTime, setIsFirstTime] = useState(false);
+  const [welcomed, setWelcomed] = useState(true); // start true to avoid flicker
 
   const dayOfWeek = new Date().getDay();
 
@@ -37,6 +69,10 @@ function DashboardContent() {
     if (!user) return;
     if (!isSupabaseConfigured()) { setLoadingData(false); return; }
 
+    // Read welcomed flag after mount (localStorage not available during SSR)
+    const alreadyWelcomed = typeof window !== 'undefined' && !!localStorage.getItem('kaydence_welcomed');
+    setWelcomed(alreadyWelcomed);
+
     async function load() {
       try {
         const [today, weekLogs, recentLogs] = await Promise.all([
@@ -50,6 +86,7 @@ function DashboardContent() {
         setAvgScore(avg);
         setTrend(computeTrend(recentLogs));
         setStreak(computeStreak(recentLogs));
+        if (recentLogs.length === 0) setIsFirstTime(true);
       } catch {
         // Supabase not reachable — show empty state
       } finally {
@@ -74,6 +111,13 @@ function DashboardContent() {
             {justCheckedIn ? 'Check-in saved. Keep moving.' : 'Did you actually move forward today?'}
           </p>
         </div>
+
+        {!welcomed && isFirstTime && !loadingData && (
+          <WelcomeCard onDismiss={() => {
+            localStorage.setItem('kaydence_welcomed', '1');
+            setWelcomed(true);
+          }} />
+        )}
 
         {loadingData ? (
           <div className="flex justify-center py-16">

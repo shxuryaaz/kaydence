@@ -30,7 +30,7 @@ function memberName(member: Profile): string {
 
 // ─── Member cards ─────────────────────────────────────────────────────────────
 
-function LogCard({ member, log, late }: { member: Profile; log: DailyLog | null; late: boolean }) {
+function LogCard({ member, log, late, isMe }: { member: Profile; log: DailyLog | null; late: boolean; isMe: boolean }) {
   if (log) {
     return (
       <div className="rounded-2xl bg-white border border-emerald-200 px-5 py-4 space-y-2.5"
@@ -39,6 +39,7 @@ function LogCard({ member, log, late }: { member: Profile; log: DailyLog | null;
           <div className="flex items-center gap-2 min-w-0">
             <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full w-5 h-5 justify-center shrink-0">✓</span>
             <p className="text-[13px] font-semibold text-[#0f0f0f] truncate">{memberName(member)}</p>
+            {isMe && <span className="text-[10px] text-[#aaa] shrink-0">(you)</span>}
           </div>
           <span className="text-[12px] font-bold text-[#0f0f0f] shrink-0">{log.score}/5</span>
         </div>
@@ -56,9 +57,12 @@ function LogCard({ member, log, late }: { member: Profile; log: DailyLog | null;
     <div className={`rounded-2xl px-5 py-4 border ${
       late ? 'bg-amber-50 border-amber-200' : 'bg-white border-[#e8e8e8]'
     }`} style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-      <div className="flex items-center justify-between">
-        <p className="text-[13px] font-semibold text-[#0f0f0f]">{memberName(member)}</p>
-        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-[13px] font-semibold text-[#0f0f0f] truncate">{memberName(member)}</p>
+          {isMe && <span className="text-[10px] text-[#aaa] shrink-0">(you)</span>}
+        </div>
+        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border shrink-0 ${
           late
             ? 'text-amber-700 bg-amber-100 border-amber-200'
             : 'text-[#aaa] bg-[#f5f5f5] border-[#e8e8e8]'
@@ -70,7 +74,7 @@ function LogCard({ member, log, late }: { member: Profile; log: DailyLog | null;
   );
 }
 
-function ReflectionCard({ member, reflection }: { member: Profile; reflection: SprintReflection | null }) {
+function ReflectionCard({ member, reflection, isMe }: { member: Profile; reflection: SprintReflection | null; isMe: boolean }) {
   if (reflection) {
     return (
       <div className="rounded-2xl bg-white border border-emerald-200 px-5 py-4 space-y-2"
@@ -78,6 +82,7 @@ function ReflectionCard({ member, reflection }: { member: Profile; reflection: S
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full w-5 h-5 justify-center shrink-0">✓</span>
           <p className="text-[13px] font-semibold text-[#0f0f0f]">{memberName(member)}</p>
+          {isMe && <span className="text-[10px] text-[#aaa]">(you)</span>}
         </div>
         <p className="text-[12px] text-[#737373] line-clamp-2 leading-relaxed">{reflection.finished_this_sprint}</p>
       </div>
@@ -87,9 +92,12 @@ function ReflectionCard({ member, reflection }: { member: Profile; reflection: S
   return (
     <div className="rounded-2xl bg-white border border-[#e8e8e8] px-5 py-4"
       style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-      <div className="flex items-center justify-between">
-        <p className="text-[13px] font-semibold text-[#0f0f0f]">{memberName(member)}</p>
-        <span className="text-[11px] font-semibold text-[#aaa] bg-[#f5f5f5] border border-[#e8e8e8] rounded-full px-2.5 py-1">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-[13px] font-semibold text-[#0f0f0f] truncate">{memberName(member)}</p>
+          {isMe && <span className="text-[10px] text-[#aaa] shrink-0">(you)</span>}
+        </div>
+        <span className="text-[11px] font-semibold text-[#aaa] bg-[#f5f5f5] border border-[#e8e8e8] rounded-full px-2.5 py-1 shrink-0">
           Pending
         </span>
       </div>
@@ -189,21 +197,29 @@ function TeamDashboardContent() {
             <div className="space-y-1">
               <p className="text-[11px] font-semibold text-[#aaa] uppercase tracking-wider">Team</p>
               <h1 className="text-[26px] font-bold text-[#0f0f0f] tracking-tight">{team.name}</h1>
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-[13px] text-[#737373]">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </p>
-                {team.standup_deadline && (
-                  <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
-                    late
-                      ? 'text-red-600 bg-red-50 border-red-200'
-                      : 'text-[#737373] bg-white border-[#e8e8e8]'
-                  }`}>
-                    {late ? `Past deadline (${team.standup_deadline})` : `Due by ${team.standup_deadline}`}
-                  </span>
-                )}
-              </div>
+              <p className="text-[13px] text-[#737373]">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </p>
             </div>
+
+            {/* Deadline callout */}
+            {team.standup_deadline && (
+              <div className={`rounded-xl px-4 py-3 flex items-center gap-3 border ${
+                late
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-[#fffbeb] border-amber-200'
+              }`}>
+                <span className="text-[16px]">{late ? '🔴' : '🕐'}</span>
+                <div>
+                  <p className={`text-[13px] font-semibold ${late ? 'text-red-700' : 'text-amber-800'}`}>
+                    {late ? 'Deadline passed' : `Check-in closes at ${team.standup_deadline}`}
+                  </p>
+                  <p className={`text-[11px] ${late ? 'text-red-500' : 'text-amber-600'}`}>
+                    {late ? `Standup was due at ${team.standup_deadline}. Members without a check-in are marked Late.` : 'Members who miss this time will be marked Late.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Progress */}
             <div className="rounded-2xl bg-white border border-[#e8e8e8] px-5 py-4"
@@ -232,14 +248,33 @@ function TeamDashboardContent() {
                 <p className="text-[13px] text-[#737373]">Share the invite link below to get people in.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {isSaturday
-                  ? reflectionStatus.map(({ member, reflection }) => (
-                      <ReflectionCard key={member.id} member={member} reflection={reflection} />
-                    ))
-                  : dailyStatus.map(({ member, log }) => (
-                      <LogCard key={member.id} member={member} log={log} late={late} />
-                    ))}
+              <div className="space-y-3">
+                {/* Legend */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    <span className="text-[11px] text-[#737373]">Submitted</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#d4d4d4] shrink-0" />
+                    <span className="text-[11px] text-[#737373]">Pending</span>
+                  </div>
+                  {team.standup_deadline && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                      <span className="text-[11px] text-[#737373]">Late</span>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {isSaturday
+                    ? reflectionStatus.map(({ member, reflection }) => (
+                        <ReflectionCard key={member.id} member={member} reflection={reflection} isMe={member.id === user?.uid} />
+                      ))
+                    : dailyStatus.map(({ member, log }) => (
+                        <LogCard key={member.id} member={member} log={log} late={!log && late} isMe={member.id === user?.uid} />
+                      ))}
+                </div>
               </div>
             )}
 
