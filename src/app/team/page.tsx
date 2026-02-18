@@ -6,13 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import Navbar from '@/components/Navbar';
-import { getUserTeam, getTeamByInviteCode } from '@/lib/team-queries';
+import { getUserTeams, getTeamByInviteCode } from '@/lib/team-queries';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import type { Team } from '@/types';
 
 function TeamHubContent() {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -21,13 +23,11 @@ function TeamHubContent() {
     if (!user) return;
     if (!isSupabaseConfigured()) { setLoading(false); return; }
 
-    getUserTeam(user.uid)
-      .then((team) => {
-        if (team) router.replace(`/team/${team.id}`);
-        else setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [user, router]);
+    getUserTeams(user.uid)
+      .then((t) => setTeams(t))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [user]);
 
   async function handleJoinCode(e: React.FormEvent) {
     e.preventDefault();
@@ -66,11 +66,34 @@ function TeamHubContent() {
 
         <div className="mb-8 space-y-1">
           <p className="text-[11px] font-semibold text-[#aaa] uppercase tracking-wider">Teams</p>
-          <h1 className="text-[26px] font-bold text-[#0f0f0f] tracking-tight">Your team.</h1>
+          <h1 className="text-[26px] font-bold text-[#0f0f0f] tracking-tight">Your teams.</h1>
           <p className="text-[13px] text-[#737373]">Create a team or join one with an invite code.</p>
         </div>
 
         <div className="space-y-3">
+
+          {/* Existing teams list */}
+          {teams.length > 0 && (
+            <div className="space-y-2">
+              {teams.map((team) => (
+                <Link
+                  key={team.id}
+                  href={`/team/${team.id}`}
+                  className="flex items-center justify-between rounded-2xl bg-white border border-[#e8e8e8] px-5 py-4 hover:border-[#0f0f0f] transition-colors"
+                  style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+                >
+                  <div>
+                    <p className="text-[14px] font-semibold text-[#0f0f0f]">{team.name}</p>
+                    {team.standup_deadline && (
+                      <p className="text-[12px] text-[#737373] mt-0.5">Deadline {team.standup_deadline}</p>
+                    )}
+                  </div>
+                  <span className="text-[#aaa] text-[13px]">→</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
           {/* Create team CTA */}
           <Link href="/team/new"
             className="block rounded-2xl bg-[#0f0f0f] px-6 py-5 hover:bg-[#262626] transition-colors"
@@ -103,6 +126,7 @@ function TeamHubContent() {
               </button>
             </form>
           </div>
+
         </div>
       </div>
     </div>

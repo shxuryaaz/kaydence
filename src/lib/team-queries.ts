@@ -27,15 +27,21 @@ export async function createTeam(
   return team as Team;
 }
 
-export async function getUserTeam(userId: string): Promise<Team | null> {
+export async function getUserTeams(userId: string): Promise<Team[]> {
   const { data, error } = await supabase
     .from('team_members')
     .select('team_id')
-    .eq('user_id', userId)
-    .limit(1)
-    .single();
-  if (error || !data) return null;
-  return getTeamById((data as { team_id: string }).team_id);
+    .eq('user_id', userId);
+  if (error || !data || data.length === 0) return [];
+
+  const teamIds = (data as { team_id: string }[]).map((d) => d.team_id);
+  const { data: teams, error: teamsError } = await supabase
+    .from('teams')
+    .select('*')
+    .in('id', teamIds)
+    .order('created_at', { ascending: false });
+  if (teamsError) return [];
+  return (teams || []) as Team[];
 }
 
 export async function getTeamById(teamId: string): Promise<Team | null> {
