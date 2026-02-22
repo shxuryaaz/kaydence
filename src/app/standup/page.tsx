@@ -2,28 +2,67 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import Navbar from '@/components/Navbar';
 import StandupForm from '@/components/StandupForm';
 import { getTodayLog } from '@/lib/queries';
+import { getFirstTeam } from '@/lib/team-queries';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import type { DailyLog } from '@/types';
+import type { DailyLog, Team } from '@/types';
+
+function isWithinWindow(team: Team): { within: boolean; status: string } {
+  if (!team.standup_window_open || !team.standup_window_close) {
+    return { within: true, status: '' };
+  }
+
+  const now = new Date();
+  const [openH, openM] = team.standup_window_open.split(':').map(Number);
+  const [closeH, closeM] = team.standup_window_close.split(':').map(Number);
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const openMins = openH * 60 + openM;
+  const closeMins = closeH * 60 + closeM;
+
+  if (nowMins < openMins) {
+    return { within: false, status: `Window opens at ${team.standup_window_open}` };
+  } else if (nowMins >= closeMins) {
+    return { within: false, status: `Window closed at ${team.standup_window_close}. Submissions will be marked late.` };
+  } else {
+    const remaining = closeMins - nowMins;
+    const hours = Math.floor(remaining / 60);
+    const mins = remaining % 60;
+    const timeLeft = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    return { within: true, status: `Closes in ${timeLeft} (${team.standup_window_close})` };
+  }
+}
 
 function StandupContent() {
   const { user } = useAuth();
+  const router = useRouter();
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
+  const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     if (!isSupabaseConfigured()) { setLoading(false); return; }
 
-    getTodayLog(user.uid)
-      .then(setTodayLog)
+    Promise.all([getTodayLog(user.uid), getFirstTeam(user.uid)])
+      .then(([log, userTeam]) => {
+        if (!userTeam) {
+          // No team → redirect to team hub
+          router.push('/team');
+          return;
+        }
+        setTodayLog(log);
+        setTeam(userTeam);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, router]);
+
+  const windowStatus = team ? isWithinWindow(team) : { within: true, status: '' };
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
@@ -36,6 +75,20 @@ function StandupContent() {
           <h1 className="text-[26px] font-bold text-[#0f0f0f] tracking-tight">Quick check-in.</h1>
           <p className="text-[13px] text-[#737373]">Shouldn't take more than 60 seconds.</p>
         </div>
+
+        {/* Time window banner */}
+        {team && windowStatus.status && (
+          <div className={`mb-6 rounded-xl px-4 py-3 flex items-center gap-3 border ${
+            windowStatus.within
+              ? 'bg-[#fffbeb] border-amber-200'
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <span className="text-[16px]">{windowStatus.within ? '🕐' : '⏰'}</span>
+            <p className={`text-[13px] font-medium ${windowStatus.within ? 'text-amber-800' : 'text-red-700'}`}>
+              {windowStatus.status}
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-16">

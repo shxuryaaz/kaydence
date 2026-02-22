@@ -1,19 +1,21 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import Navbar from '@/components/Navbar';
 import WeeklyReportCard from '@/components/WeeklyReportCard';
 import { getLatestWeeklyReport } from '@/lib/queries';
+import { getFirstTeam } from '@/lib/team-queries';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { WeeklyReport } from '@/types';
 
 function ReportContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const justGenerated = searchParams.get('generated') === '1';
 
   const [report, setReport] = useState<WeeklyReport | null>(null);
@@ -23,11 +25,17 @@ function ReportContent() {
     if (!user) return;
     if (!isSupabaseConfigured()) { setLoading(false); return; }
 
-    getLatestWeeklyReport(user.uid)
-      .then(setReport)
+    Promise.all([getLatestWeeklyReport(user.uid), getFirstTeam(user.uid)])
+      .then(([latestReport, team]) => {
+        if (!team) {
+          router.push('/team');
+          return;
+        }
+        setReport(latestReport);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, router]);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">

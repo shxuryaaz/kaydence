@@ -2,16 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import Navbar from '@/components/Navbar';
 import SprintReflectionForm from '@/components/SprintReflectionForm';
 import { getTodayReflection } from '@/lib/queries';
+import { getFirstTeam } from '@/lib/team-queries';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import type { SprintReflection } from '@/types';
 
 function ReflectionContent() {
   const { user } = useAuth();
+  const router = useRouter();
   const [todayReflection, setTodayReflection] = useState<SprintReflection | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,11 +22,17 @@ function ReflectionContent() {
     if (!user) return;
     if (!isSupabaseConfigured()) { setLoading(false); return; }
 
-    getTodayReflection(user.uid)
-      .then(setTodayReflection)
+    Promise.all([getTodayReflection(user.uid), getFirstTeam(user.uid)])
+      .then(([reflection, team]) => {
+        if (!team) {
+          router.push('/team');
+          return;
+        }
+        setTodayReflection(reflection);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, router]);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
