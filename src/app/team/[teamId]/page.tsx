@@ -30,10 +30,12 @@ function memberName(member: Profile): string {
 
 // ─── Member cards ─────────────────────────────────────────────────────────────
 
-function LogCard({ member, log, late, isMe }: { member: Profile; log: DailyLog | null; late: boolean; isMe: boolean }) {
+function LogCard({ member, log, late, isMe, expanded, onClick }: { member: Profile; log: DailyLog | null; late: boolean; isMe: boolean; expanded: boolean; onClick: () => void }) {
   if (log) {
     return (
-      <div className="rounded-2xl bg-white border border-emerald-200 px-5 py-4 space-y-2.5"
+      <div
+        onClick={onClick}
+        className="rounded-2xl bg-white border border-emerald-200 px-5 py-4 space-y-2.5 cursor-pointer hover:border-emerald-300 transition-colors"
         style={{ boxShadow: '0 1px 4px rgba(16,185,129,0.08)' }}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
@@ -41,13 +43,39 @@ function LogCard({ member, log, late, isMe }: { member: Profile; log: DailyLog |
             <p className="text-[13px] font-semibold text-[#0f0f0f] truncate">{memberName(member)}</p>
             {isMe && <span className="text-[10px] text-[#aaa] shrink-0">(you)</span>}
           </div>
-          <span className="text-[12px] font-bold text-[#0f0f0f] shrink-0">{log.score}/5</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[12px] font-bold text-[#0f0f0f]">{log.score}/5</span>
+            <span className="text-[11px] text-[#aaa]">{expanded ? '▼' : '▶'}</span>
+          </div>
         </div>
-        <p className="text-[12px] text-[#737373] line-clamp-2 leading-relaxed">{log.worked_on}</p>
-        {log.blockers && log.blockers.toLowerCase() !== 'none' && (
-          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 line-clamp-1">
-            ⚠ {log.blockers}
-          </p>
+        {expanded ? (
+          <div className="space-y-3 pt-1">
+            <div>
+              <p className="text-[10px] font-semibold text-[#aaa] uppercase tracking-wide mb-0.5">Worked on</p>
+              <p className="text-[12px] text-[#737373] leading-relaxed">{log.worked_on}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-[#aaa] uppercase tracking-wide mb-0.5">Up next</p>
+              <p className="text-[12px] text-[#737373] leading-relaxed">{log.working_next}</p>
+            </div>
+            {log.blockers && log.blockers.toLowerCase() !== 'none' && (
+              <div>
+                <p className="text-[10px] font-semibold text-[#aaa] uppercase tracking-wide mb-0.5">Blockers</p>
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5">
+                  ⚠ {log.blockers}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <p className="text-[12px] text-[#737373] line-clamp-2 leading-relaxed">{log.worked_on}</p>
+            {log.blockers && log.blockers.toLowerCase() !== 'none' && (
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 line-clamp-1">
+                ⚠ {log.blockers}
+              </p>
+            )}
+          </>
         )}
       </div>
     );
@@ -74,17 +102,39 @@ function LogCard({ member, log, late, isMe }: { member: Profile; log: DailyLog |
   );
 }
 
-function ReflectionCard({ member, reflection, isMe }: { member: Profile; reflection: SprintReflection | null; isMe: boolean }) {
+function ReflectionCard({ member, reflection, isMe, expanded, onClick }: { member: Profile; reflection: SprintReflection | null; isMe: boolean; expanded: boolean; onClick: () => void }) {
   if (reflection) {
     return (
-      <div className="rounded-2xl bg-white border border-emerald-200 px-5 py-4 space-y-2"
+      <div
+        onClick={onClick}
+        className="rounded-2xl bg-white border border-emerald-200 px-5 py-4 space-y-2 cursor-pointer hover:border-emerald-300 transition-colors"
         style={{ boxShadow: '0 1px 4px rgba(16,185,129,0.08)' }}>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full w-5 h-5 justify-center shrink-0">✓</span>
-          <p className="text-[13px] font-semibold text-[#0f0f0f]">{memberName(member)}</p>
-          {isMe && <span className="text-[10px] text-[#aaa]">(you)</span>}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full w-5 h-5 justify-center shrink-0">✓</span>
+            <p className="text-[13px] font-semibold text-[#0f0f0f] truncate">{memberName(member)}</p>
+            {isMe && <span className="text-[10px] text-[#aaa]">(you)</span>}
+          </div>
+          <span className="text-[11px] text-[#aaa] shrink-0">{expanded ? '▼' : '▶'}</span>
         </div>
-        <p className="text-[12px] text-[#737373] line-clamp-2 leading-relaxed">{reflection.finished_this_sprint}</p>
+        {expanded ? (
+          <div className="pt-1">
+            <p className="text-[10px] font-semibold text-[#aaa] uppercase tracking-wide mb-1">Finished this sprint</p>
+            <p className="text-[12px] text-[#737373] leading-relaxed whitespace-pre-wrap">{reflection.finished_this_sprint}</p>
+            {reflection.doc_link && (
+              <div className="mt-3">
+                <p className="text-[10px] font-semibold text-[#aaa] uppercase tracking-wide mb-1">Doc</p>
+                <a href={reflection.doc_link} target="_blank" rel="noopener noreferrer"
+                  className="text-[11px] text-blue-600 hover:underline break-all"
+                  onClick={(e) => e.stopPropagation()}>
+                  {reflection.doc_link}
+                </a>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-[12px] text-[#737373] line-clamp-2 leading-relaxed">{reflection.finished_this_sprint}</p>
+        )}
       </div>
     );
   }
@@ -118,6 +168,7 @@ function TeamDashboardContent() {
   const [reflectionStatus, setReflectionStatus] = useState<ReflectionStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   const today = new Date().toISOString().split('T')[0];
   const isSaturday = new Date().getDay() === 6;
@@ -172,6 +223,18 @@ function TeamDashboardContent() {
     navigator.clipboard.writeText(inviteUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  function toggleCard(memberId: string) {
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(memberId)) {
+        next.delete(memberId);
+      } else {
+        next.add(memberId);
+      }
+      return next;
+    });
   }
 
   const late = isLate(team?.standup_deadline ?? null);
@@ -269,10 +332,25 @@ function TeamDashboardContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {isSaturday
                     ? reflectionStatus.map(({ member, reflection }) => (
-                        <ReflectionCard key={member.id} member={member} reflection={reflection} isMe={member.id === user?.uid} />
+                        <ReflectionCard
+                          key={member.id}
+                          member={member}
+                          reflection={reflection}
+                          isMe={member.id === user?.uid}
+                          expanded={expandedCards.has(member.id)}
+                          onClick={() => toggleCard(member.id)}
+                        />
                       ))
                     : dailyStatus.map(({ member, log }) => (
-                        <LogCard key={member.id} member={member} log={log} late={!log && late} isMe={member.id === user?.uid} />
+                        <LogCard
+                          key={member.id}
+                          member={member}
+                          log={log}
+                          late={!log && late}
+                          isMe={member.id === user?.uid}
+                          expanded={expandedCards.has(member.id)}
+                          onClick={() => toggleCard(member.id)}
+                        />
                       ))}
                 </div>
               </div>
