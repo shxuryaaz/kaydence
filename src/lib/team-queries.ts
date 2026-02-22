@@ -39,9 +39,14 @@ export async function getUserTeams(userId: string): Promise<Team[]> {
     .from('teams')
     .select('*')
     .in('id', teamIds)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false});
   if (teamsError) return [];
   return (teams || []) as Team[];
+}
+
+export async function getFirstTeam(userId: string): Promise<Team | null> {
+  const teams = await getUserTeams(userId);
+  return teams.length > 0 ? teams[0] : null;
 }
 
 export async function getTeamById(teamId: string): Promise<Team | null> {

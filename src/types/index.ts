@@ -14,6 +14,8 @@ export interface DailyLog {
   blockers: string;
   score: number;
   created_at: string;
+  submitted_at: string;
+  submitted_via: 'web' | 'slack';
 }
 
 export interface SprintReflection {
@@ -44,7 +46,12 @@ export interface Team {
   name: string;
   owner_id: string;
   invite_code: string;
-  standup_deadline: string | null; // "HH:MM" 24h
+  standup_deadline: string | null; // "HH:MM" 24h (legacy, use window_close)
+  standup_window_open: string | null; // "HH:MM" 24h
+  standup_window_close: string | null; // "HH:MM" 24h
+  slack_team_id: string | null;
+  slack_bot_token: string | null;
+  slack_channel_id: string | null;
   created_at: string;
 }
 
@@ -57,4 +64,11 @@ export interface TeamMember {
 
 export interface TeamMemberWithProfile extends TeamMember {
   profile: Profile;
+}
+
+export interface SlackUser {
+  user_id: string;
+  slack_user_id: string;
+  slack_dm_channel_id: string | null;
+  created_at: string;
 }
