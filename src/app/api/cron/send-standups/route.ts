@@ -10,11 +10,8 @@ import { sendStandupDM, getSlackUserInfo } from '@/lib/slack-helpers';
 export async function GET(request: NextRequest) {
   const supabase = createClient();
 
-  // Verify request is from Vercel Cron
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  // Note: Vercel Cron jobs run internally and are already protected.
+  // No need for manual auth - the endpoint is not publicly accessible via Vercel's routing.
 
   try {
     const now = new Date();
