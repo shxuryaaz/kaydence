@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase';
-import { sendStandupDM, getSlackUserInfo } from '@/lib/slack-helpers';
+import { sendStandupDM } from '@/lib/slack-helpers';
 
 // ─── Send Standup DMs (Cron Job) ──────────────────────────────────────────────
-// This route is called by Vercel Cron every 15 minutes.
-// It finds teams whose standup window is opening now and sends DMs to members.
+// This route is called by Vercel Cron once daily (9:00 UTC). Vercel Hobby allows
+// only one cron run per day. It finds all teams with a standup window and sends
+// DMs to members who haven't submitted today.
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
@@ -18,29 +19,18 @@ export async function GET(request: NextRequest) {
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const currentDate = now.toISOString().split('T')[0];
 
-    // Find teams whose standup window opens within the last 15 minutes
-    // (Since cron runs every 15 min, we check if window_open is between now-15 and now)
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const fifteenMinutesAgo = nowMinutes - 15;
-
-    const { data: allTeams, error: teamsError } = await supabase
+    // With daily cron only: notify all teams that have a standup window set.
+    // Members who already submitted today are skipped below.
+    const { data: teamsToNotify, error: teamsError } = await supabase
       .from('teams')
       .select('id, name, standup_window_open, slack_bot_token, slack_team_id')
       .not('standup_window_open', 'is', null)
       .not('slack_bot_token', 'is', null);
 
-    if (teamsError || !allTeams) {
+    if (teamsError || !teamsToNotify) {
       console.error('Failed to fetch teams:', teamsError);
       return NextResponse.json({ error: 'Failed to fetch teams' }, { status: 500 });
     }
-
-    // Filter teams whose window is opening now
-    const teamsToNotify = allTeams.filter((team) => {
-      if (!team.standup_window_open) return false;
-      const [h, m] = team.standup_window_open.split(':').map(Number);
-      const windowMinutes = h * 60 + m;
-      return windowMinutes > fifteenMinutesAgo && windowMinutes <= nowMinutes;
-    });
 
     let sentCount = 0;
     let errorCount = 0;
