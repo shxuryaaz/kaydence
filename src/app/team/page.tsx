@@ -76,20 +76,32 @@ function TeamHubContent() {
           {teams.length > 0 && (
             <div className="space-y-2">
               {teams.map((team) => (
-                <Link
+                <div
                   key={team.id}
-                  href={`/team/${team.id}`}
-                  className="flex items-center justify-between rounded-2xl bg-white border border-[#e8e8e8] px-5 py-4 hover:border-[#0f0f0f] transition-colors"
+                  className="flex items-center justify-between gap-2 rounded-2xl bg-white border border-[#e8e8e8] px-5 py-4 hover:border-[#0f0f0f] transition-colors"
                   style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
                 >
-                  <div>
-                    <p className="text-[14px] font-semibold text-[#0f0f0f]">{team.name}</p>
-                    {team.standup_deadline && (
-                      <p className="text-[12px] text-[#737373] mt-0.5">Deadline {team.standup_deadline}</p>
-                    )}
-                  </div>
-                  <span className="text-[#aaa] text-[13px]">→</span>
-                </Link>
+                  <Link href={`/team/${team.id}`} className="flex-1 min-w-0 flex items-center justify-between">
+                    <div>
+                      <p className="text-[14px] font-semibold text-[#0f0f0f]">{team.name}</p>
+                      {team.standup_deadline && (
+                        <p className="text-[12px] text-[#737373] mt-0.5">Deadline {team.standup_deadline}</p>
+                      )}
+                    </div>
+                    <span className="text-[#aaa] text-[13px] shrink-0 ml-2">→</span>
+                  </Link>
+                  <Link
+                    href={`/team/${team.id}/settings`}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[#737373] hover:bg-[#f0f0f0] hover:text-[#0f0f0f] border border-transparent hover:border-[#e8e8e8] transition-colors"
+                    title="Slack, standup window, and more"
+                  >
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Settings</span>
+                  </Link>
+                </div>
               ))}
             </div>
           )}
