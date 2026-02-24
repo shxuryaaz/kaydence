@@ -45,13 +45,17 @@ export async function PATCH(
     return NextResponse.json({ error: 'Only the team owner can update settings' }, { status: 403 });
   }
 
-  const updates: Record<string, unknown> = {};
+  const updates: Record<string, string | null> = {};
   if (body.standup_window_open !== undefined) updates.standup_window_open = body.standup_window_open || null;
   if (body.standup_window_close !== undefined) updates.standup_window_close = body.standup_window_close || null;
   if (body.disconnect_slack) {
     updates.slack_team_id = null;
     updates.slack_bot_token = null;
     updates.slack_channel_id = null;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ ok: true });
   }
 
   const { error: updateError } = await supabase
@@ -61,7 +65,10 @@ export async function PATCH(
 
   if (updateError) {
     console.error('Team settings update failed:', updateError);
-    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
+    const message = updateError.code === 'PGRST301' || updateError.message?.includes('400')
+      ? 'Invalid update (check teams table columns).'
+      : 'Failed to save settings';
+    return NextResponse.json({ error: message, details: updateError.message }, { status: 500 });
   }
 
   if (body.disconnect_slack) {

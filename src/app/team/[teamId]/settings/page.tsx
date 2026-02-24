@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import Navbar from '@/components/Navbar';
 import { getTeamById, isUserInTeam } from '@/lib/team-queries';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { Team } from '@/types';
 
 function SettingsContent() {
@@ -20,36 +20,47 @@ function SettingsContent() {
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [windowOpen, setWindowOpen] = useState('');
   const [windowClose, setWindowClose] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [slackUserId, setSlackUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     if (!isSupabaseConfigured()) { setLoading(false); return; }
 
-    // Check for OAuth callback messages
+    // Check for OAuth + link callback messages
     const slackConnected = searchParams.get('slack_connected');
     const slackError = searchParams.get('slack_error');
+    const slackLinked = searchParams.get('slack_linked');
+    const slackLinkError = searchParams.get('slack_link_error');
 
     if (slackConnected) {
       setSuccess(`Successfully connected to Slack workspace: ${slackConnected}`);
       setTimeout(() => setSuccess(''), 5000);
-    } else if (slackError) {
+    } else if (slackLinked) {
+      setSuccess('Your Slack account is linked. You will receive standup DMs.');
+      setTimeout(() => setSuccess(''), 5000);
+    } else if (slackError || slackLinkError) {
       const errorMessages: Record<string, string> = {
         denied: 'Slack authorization was denied.',
         missing_params: 'Invalid OAuth callback parameters.',
         db_error: 'Failed to save Slack credentials to database. Add SUPABASE_SERVICE_ROLE_KEY in Vercel and ensure the teams table allows updates.',
         service_role_required: 'Server config missing: add SUPABASE_SERVICE_ROLE_KEY in Vercel project environment variables, then try connecting again.',
         oauth_failed: 'Slack OAuth failed. Please try again.',
+        link_denied: 'Slack linking was denied.',
+        link_missing_params: 'Invalid Slack link callback parameters.',
+        link_failed: 'Slack linking failed. Please try again.',
       };
-      setError(errorMessages[slackError] || 'An unknown error occurred.');
+      const code = slackError || slackLinkError || '';
+      setError(errorMessages[code] || 'An unknown error occurred.');
       setTimeout(() => setError(''), 5000);
     }
 
     Promise.all([getTeamById(teamId), isUserInTeam(user.uid, teamId)])
-      .then(([teamData, inTeam]) => {
+      .then(async ([teamData, inTeam]) => {
         if (!teamData || !inTeam) {
           router.replace('/team');
           return;
@@ -57,6 +68,22 @@ function SettingsContent() {
         setTeam(teamData);
         setWindowOpen(teamData.standup_window_open || '');
         setWindowClose(teamData.standup_window_close || '');
+
+        // Check if this user already has a linked Slack account
+        try {
+          const { data } = await supabase
+            .from('slack_users')
+            .select('slack_user_id')
+            .eq('user_id', user.uid)
+            .limit(1)
+            .maybeSingle();
+
+          if (data?.slack_user_id) {
+            setSlackUserId(data.slack_user_id);
+          }
+        } catch {
+          // best-effort only
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -136,6 +163,22 @@ function SettingsContent() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleLinkSlack() {
+    if (!team || !user) return;
+    const clientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
+    if (!clientId) {
+      setError('Slack app not configured. Add NEXT_PUBLIC_SLACK_CLIENT_ID to environment variables.');
+      return;
+    }
+
+    setLinking(true);
+    const redirectUri = `${window.location.origin}/api/slack/link-user/oauth`;
+    const scope = 'chat:write,im:write,users:read,channels:read';
+    const state = `${teamId}:${user.uid}`;
+    const slackAuthUrl = `https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${scope}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
+    window.location.href = slackAuthUrl;
   }
 
   const isOwner = team?.owner_id === user?.uid;
@@ -240,27 +283,56 @@ function SettingsContent() {
               <div>
                 <h2 className="text-[15px] font-semibold text-[#0f0f0f] mb-1">Slack Integration</h2>
                 <p className="text-[12px] text-[#737373]">
-                  Connect your Slack workspace to send standup DMs and collect responses automatically.
+                  Connect your Slack workspace, then link your own Slack account to receive standup DMs.
                 </p>
               </div>
 
               {team.slack_team_id ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[14px]">✅</span>
-                    <p className="text-[13px] text-[#0f0f0f] font-medium">Connected to Slack</p>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px]">✅</span>
+                      <p className="text-[13px] text-[#0f0f0f] font-medium">Workspace connected</p>
+                    </div>
+                    <p className="text-[11px] text-[#737373]">
+                      Daily standup DMs are sent from this Slack workspace at the window open time.
+                    </p>
+                    {isOwner && (
+                      <button
+                        onClick={handleDisconnect}
+                        disabled={saving}
+                        className="px-4 py-2 bg-red-600 text-white text-[13px] font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50">
+                        {saving ? 'Disconnecting...' : 'Disconnect Slack'}
+                      </button>
+                    )}
                   </div>
-                  <p className="text-[11px] text-[#737373]">
-                    Team members will receive daily standup DMs at the window open time. They can reply in Slack or use the web app.
-                  </p>
-                  {isOwner && (
-                    <button
-                      onClick={handleDisconnect}
-                      disabled={saving}
-                      className="px-4 py-2 bg-red-600 text-white text-[13px] font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50">
-                      {saving ? 'Disconnecting...' : 'Disconnect Slack'}
-                    </button>
-                  )}
+
+                  <div className="border-t border-[#f0f0f0] pt-4 space-y-2">
+                    <p className="text-[12px] font-semibold text-[#0f0f0f]">Your Slack account</p>
+                    {slackUserId ? (
+                      <p className="text-[12px] text-[#737373]">
+                        Linked as{' '}
+                        <code className="px-1.5 py-0.5 rounded-md bg-[#f5f5f5] border border-[#e5e5e5] text-[11px]">
+                          {slackUserId}
+                        </code>. You&apos;ll receive standup DMs in Slack.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-[11px] text-[#737373]">
+                          Click below to link your Slack account. You&apos;ll be taken to Slack to authorize, then
+                          redirected back here.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleLinkSlack}
+                          disabled={linking}
+                          className="w-full py-2.5 bg-[#0f0f0f] text-white text-[13px] font-medium rounded-xl hover:bg-[#262626] transition-colors disabled:opacity-40"
+                        >
+                          {linking ? 'Opening Slack…' : 'Link my Slack account with Slack'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <>
@@ -282,7 +354,7 @@ function SettingsContent() {
                     </div>
                   )}
                   <p className="text-[11px] text-[#737373]">
-                    After connecting, team members can link their Slack accounts to receive DMs.
+                    After your team owner connects Slack, you&apos;ll be able to link your own Slack account here.
                   </p>
                 </>
               )}
