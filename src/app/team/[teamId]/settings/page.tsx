@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import AuthGuard from '@/components/AuthGuard';
 import Navbar from '@/components/Navbar';
 import { getTeamById, isUserInTeam } from '@/lib/team-queries';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import type { Team } from '@/types';
 
 function SettingsContent() {
@@ -64,27 +64,32 @@ function SettingsContent() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!team) return;
+    if (!team || !user) return;
 
     setError('');
     setSuccess('');
     setSaving(true);
 
     try {
-      const { error: updateError } = await supabase
-        .from('teams')
-        .update({
+      const res = await fetch(`/api/team/${teamId}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           standup_window_open: windowOpen || null,
           standup_window_close: windowClose || null,
-        })
-        .eq('id', teamId);
+          user_id: user.uid,
+        }),
+      });
 
-      if (updateError) throw updateError;
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Save failed');
+      }
 
       setSuccess('Settings saved successfully');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Failed to save settings. Try again.');
+      setError(err instanceof Error ? err.message : 'Failed to save settings. Try again.');
     } finally {
       setSaving(false);
     }
@@ -106,41 +111,28 @@ function SettingsContent() {
   }
 
   async function handleDisconnect() {
-    if (!team || !confirm('Disconnect Slack? Team members will stop receiving standup DMs.')) return;
+    if (!team || !user || !confirm('Disconnect Slack? Team members will stop receiving standup DMs.')) return;
 
     setError('');
     setSuccess('');
     setSaving(true);
 
     try {
-      const { error: updateError } = await supabase
-        .from('teams')
-        .update({
-          slack_team_id: null,
-          slack_bot_token: null,
-          slack_channel_id: null,
-        })
-        .eq('id', teamId);
+      const res = await fetch(`/api/team/${teamId}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ disconnect_slack: true, user_id: user.uid }),
+      });
 
-      if (updateError) throw updateError;
-
-      // Also delete all slack_users for this team's members
-      const { data: members } = await supabase
-        .from('team_members')
-        .select('user_id')
-        .eq('team_id', teamId);
-
-      if (members && members.length > 0) {
-        const userIds = members.map((m) => m.user_id);
-        await supabase.from('slack_users').delete().in('user_id', userIds);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Disconnect failed');
       }
 
       setSuccess('Slack disconnected successfully');
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
-      setError('Failed to disconnect Slack. Try again.');
+      setError(err instanceof Error ? err.message : 'Failed to disconnect Slack. Try again.');
     } finally {
       setSaving(false);
     }
