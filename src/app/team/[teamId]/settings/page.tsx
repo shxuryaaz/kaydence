@@ -40,7 +40,8 @@ function SettingsContent() {
       const errorMessages: Record<string, string> = {
         denied: 'Slack authorization was denied.',
         missing_params: 'Invalid OAuth callback parameters.',
-        db_error: 'Failed to save Slack credentials to database.',
+        db_error: 'Failed to save Slack credentials to database. Add SUPABASE_SERVICE_ROLE_KEY in Vercel and ensure the teams table allows updates.',
+        service_role_required: 'Server config missing: add SUPABASE_SERVICE_ROLE_KEY in Vercel project environment variables, then try connecting again.',
         oauth_failed: 'Slack OAuth failed. Please try again.',
       };
       setError(errorMessages[slackError] || 'An unknown error occurred.');

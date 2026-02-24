@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WebClient } from '@slack/web-api';
-import { createClient } from '@/lib/supabase';
+import { createServerClient, createClient } from '@/lib/supabase';
 
 // ─── Slack OAuth Callback ─────────────────────────────────────────────────────
 // This route handles the OAuth callback after a team owner connects Slack.
@@ -8,7 +8,15 @@ import { createClient } from '@/lib/supabase';
 // ──────────────────────────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
+  // Use service role so the update succeeds even if RLS is enabled on teams
+  const supabase = createServerClient();
+  if (!supabase) {
+    console.error('Slack OAuth: SUPABASE_SERVICE_ROLE_KEY is not set. Add it in Vercel env vars.');
+    const state = new URL(request.url).searchParams.get('state') || '';
+    return NextResponse.redirect(
+      new URL(`/team/${state}/settings?slack_error=service_role_required`, request.url)
+    );
+  }
   const { searchParams } = new URL(request.url);
 
   const code = searchParams.get('code');
